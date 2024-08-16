@@ -41,15 +41,130 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
-    const userCollection =client.db("taskBD").collection("products");
+    const productCollection =client.db("taskBD").collection("products");
     
 
  
-    app.get('/products', async (req, res) => {
-      const cursor = userCollection.find();
-      const result = await cursor.toArray();
+  app.get('/products', async (req, res) => {
+      const product = productCollection.find();
+      const result = await product.toArray();
       res.send(result);
   })
+
+
+//   app.get('/api/products', async (req, res) => {
+//     try {
+//         const page = parseInt(req.query.page) || 1;
+//         const limit = parseInt(req.query.limit) || 10;
+//         const sortField = req.query.sortField || 'creationDate'; // Default to sorting by date
+//         const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1; // Ascending or Descending
+
+        
+
+//         const startIndex = (page - 1) * limit;
+     
+       
+
+
+
+//         const total = await productCollection.countDocuments();
+
+//         const products = await productCollection.find({})
+//             .sort({ [sortField]: sortOrder })  // Sorting by price
+//             .skip(startIndex)
+//             .limit(limit)
+//             .toArray();
+
+//         res.json({
+//             page,
+//             totalPages: Math.ceil(total / limit),
+//             products
+//         });
+//     } catch (err) {
+//         res.status(500).json({ message: err.message });
+//     }
+// });
+
+app.get('/api/products', async (req, res) => {
+  try {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const searchQuery = req.query.search || '';
+      const sortField = req.query.sortField || 'creationDate';
+      const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+
+      
+
+      const startIndex = (page - 1) * limit;
+   
+      const searchCriteria = searchQuery
+          ? { ProductName: { $regex: searchQuery, $options: 'i' } } // 'i' for case-insensitive
+          : {};
+
+
+
+      const total = await productCollection.countDocuments(searchCriteria);
+
+      const products = await productCollection.find(searchCriteria)
+          .sort({ [sortField]: sortOrder })  // Sorting logic
+          .skip(startIndex)
+          .limit(limit)
+          .toArray();
+
+      res.json({
+          page,
+          totalPages: Math.ceil(total / limit),
+          products
+      });
+  } catch (err) {
+      res.status(500).json({ message: err.message });
+  }
+});
+
+
+
+
+
+app.get('/api/products/filter', async (req, res) => {
+  try {
+      const { page = 1, limit = 10, Brand, Category, minPrice, maxPrice, sortField = 'creationDate', sortOrder = 'desc' } = req.query;
+
+      const query = {};
+
+      // Apply filters based on user input
+      if (Brand) {
+          query.Brand = Brand;
+      }
+      if (Category) {
+          query.Category = Category;
+      }
+      if (minPrice || maxPrice) {
+          query.Price = {};
+          if (minPrice) query.Price.$gte = parseFloat(minPrice);
+          if (maxPrice) query.Price.$lte = parseFloat(maxPrice);
+      }
+
+      const startIndex = (page - 1) * limit;
+      const collection = db.collection('products');
+
+      const total = await collection.countDocuments(query);
+
+      const products = await collection.find(query)
+          .sort({ [sortField]: sortOrder === 'asc' ? 1 : -1 })
+          .skip(startIndex)
+          .limit(limit)
+          .toArray();
+
+      res.json({
+          page,
+          totalPages: Math.ceil(total / limit),
+          products
+      });
+  } catch (err) {
+      res.status(500).json({ message: err.message });
+  }
+});
+
 
 
 
