@@ -84,13 +84,90 @@ app.get('/api/products', async (req, res) => {
           totalPages: Math.ceil(total / limit),
           products
       });
-      
+     
   } catch (err) {
       res.status(500).json({ message: err.message });
   }
 });
 
 
+
+
+
+
+
+
+// app.get('/api/productsfilter', async (req, res) => {
+//   try {
+//       const { brand, category, minPrice, maxPrice, page = 1, limit = 10 } = req.query;
+//       const query = {};
+//       // res.send(req.query);
+//       // Apply filters based on the query parameters
+//       if (brand) {
+//           query.brand = brand;
+//       }
+      
+//       if (category) {
+//           query.category = category;
+//       }
+      
+//       if (minPrice || maxPrice) {
+//           query.price = {};
+//           if (minPrice) query.price = { $gte: parseFloat(minPrice) };
+//           if (maxPrice) query.price = { $lte: parseFloat(maxPrice) };
+//       }
+      
+//       const startIndex = (page - 1) * limit;
+      
+      
+
+//       const total = await productCollection.countDocuments(query);
+      
+
+//       const products = await productCollection.find(query)
+//           .skip(startIndex)
+//           .limit(limit)
+//           .toArray();
+//           res.send(products);
+//       res.json({
+//           page,
+//           totalPages: Math.ceil(total / limit),
+//           products
+//       });
+//   } catch (err) {
+//       res.status(500).json({ message: err.message });
+//   }
+// });
+
+
+
+
+
+app.get('/api/products/fil/', async (req, res) => {
+  const { brand, category, minPrice, maxPrice, page = 1, limit = 10 } = req.query;
+  const filter = {};
+  
+  if (brand) filter.brand = brand;
+  if (category) filter.category = category;
+  if (minPrice || maxPrice) {
+    filter.price = {};
+    if (minPrice) filter.price.$gte = parseFloat(minPrice);
+    if (maxPrice) filter.price.$lte = parseFloat(maxPrice);
+  }
+  
+  const options = {
+    skip: (parseInt(page) - 1) * parseInt(limit),
+    limit: parseInt(limit),
+  };
+
+  try {
+    const products = await productCollection.find(filter, options).toArray();
+    const total = await productCollection.countDocuments(filter);
+    res.json({ products, total:Math.ceil(total / limit), page: parseInt(page), limit: parseInt(limit) });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 
 
